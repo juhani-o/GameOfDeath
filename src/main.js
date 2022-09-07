@@ -1,37 +1,36 @@
-class GameOfDeath {
-  constructor() {
-    this.angle = 0;
-    this.canvas = null;
-    this.ctx = null;
-    this.models = [];
-    this.updatefrequency = (1000 / 60) * (60 / 30) - (1000 / 60) * 0.5;
-    this.lastFrameTime = 0;
-    this.g_x = 0;
-    this.g_y = 0;
-    this.v_x = 0;
-    this.v_y = 0;
-    this.collisionChart = {};
+var angle = 0;
+var cnv = null;
+var c = null;
+var models = [];
+var updatefrequency = (1000 / 60) * (60 / 30) - (1000 / 60) * 0.5;
+var lastFrameTime = 0;
+var g_x = 0;
+var g_y = 0;
+var v_x = 0;
+var v_y = 0;
+var collisionChart = {};
+
+create2DPath = (paths) => {
+  if (!paths || paths.length === 0) return false;
+
+  var tmp = new Path2D();
+  for (let i = 0; i < paths.length; i++) {
+    tmp.addPath(new Path2D(paths[i]));
   }
+  return tmp;
+};
 
-  create2DPath = (paths) => {
-    if (!paths || paths.length === 0) return false;
+mouseEventListener = (e) => {
+  var cRect = cnv.getBoundingClientRect();
+  m_x = e.clientX - cRect.left;
+  m_y = e.clientY - cRect.top;
+};
 
-    var tmp = new Path2D();
-    for (let i = 0; i < paths.length; i++) {
-      tmp.addPath(new Path2D(paths[i]));
-    }
-    return tmp;
-  };
-
-  mouseEventListener = (e) => {
-    var cRect = this.canvas.getBoundingClientRect();
-    this.m_x = e.clientX - cRect.left;
-    this.m_y = e.clientY - cRect.top;
-  };
-
-  keybEventListener = (e) => {
-    if (e.type === 'keydown') {
-    var x = this.v_x, y = this.v_y;
+keybEventListener = (e) => {
+  console.log(e.type)
+  if (e.type === "keydown") {
+    var x = v_x,
+      y = v_y;
     switch (e.key) {
       case "a":
         x = x - 2;
@@ -46,109 +45,105 @@ class GameOfDeath {
         y = y + 4;
         break;
     }
-    this.v_x = x;
-    this.v_y = y;
-    }
-  };
+    v_x = x;
+    v_y = y;
+    console.log(vx,vy)
+  }
+};
 
-  main = () => {
-    const canvas = document.getElementById("ca");
-    const ctx = canvas.getContext("2d");
-    canvas.addEventListener("mousemove", this.mouseEventListener);
-    window.addEventListener("keydown", this.keybEventListener);
-    window.addEventListener("keyup", this.keybEventListener);
-    this.canvas = canvas;
-    this.ctx = ctx;
-    this.createModelsFromData(getObjectsData());
-    window.requestAnimationFrame(this.update);
-  };
+main = () => {
+  cnv = document.getElementById("ca");
+  c = cnv.getContext("2d");
+  cnv.addEventListener("mousemove", mouseEventListener);
+  window.addEventListener("keydown", keybEventListener);
+  window.addEventListener("keyup", keybEventListener);
+  createModelsFromData(getObjectsData());
+  window.requestAnimationFrame(update);
+};
 
-  calculateLocations = () => {
-    this.v_x = this.v_x / 1.1;
-    this.v_y = this.v_y / 1.1;
-    var x = this.g_x,
-      y = this.g_y;
-    var _x = this.v_x,
-      _y = this.v_y;
-    x = x + _x;
-    y = y + _y;
-    this.g_x = x;
-    this.g_y = y;
-  };
+calculateLocations = () => {
+  v_x = v_x / 1.1;
+  v_y = v_y / 1.1;
+  var x = g_x,
+    y = g_y;
+  var _x = v_x,
+    _y = v_y;
+  x = x + _x;
+  y = y + _y;
+  g_x = x;
+  g_y = y;
+};
 
-  updateCollisionMap = (item) => {
-    var c = this.ctx;
-    var tempChart = [];
-    for(var i=0;i < this.canvas.clientWidth;i=i+10) {
-      for(var j=0;j < this.canvas.clientHeight;j=j+10) {
-        if (c.isPointInPath(this.models[item], i, j, )) {
-          tempChart.push({ x: i, y: j})
-        }
+updateCollisionMap = (item) => {
+  var tempChart = [];
+  for (var i = 0; i < cnv.clientWidth; i = i + 10) {
+    for (var j = 0; j < cnv.clientHeight; j = j + 10) {
+      if (c.isPointInPath(models[item], i, j)) {
+        tempChart.push({ x: i, y: j });
       }
     }
-    this.collisionChart[item] = tempChart;
   }
+  collisionChart[item] = tempChart;
+};
 
-  testCollision = (item1, item2) => {
-    return this.collisionChart[item1].some(object1 => {
-      return this.collisionChart[item2].some(object2 => {
-        return object1.x === object2.x && object1.y === object2.y;
-      });
+testCollision = (item1, item2) => {
+  return collisionChart[item1].some((object1) => {
+    return collisionChart[item2].some((object2) => {
+      return object1.x === object2.x && object1.y === object2.y;
     });
+  });
+};
+
+draw = () => {
+  angle = angle + 0.1;
+  c.clearRect(0, 0, c.canvas.clientWidth, c.canvas.clientHeight);
+  c.save();
+  c.translate(100 + g_x, 120 + g_y);
+  c.scale(0.5, 0.5);
+  c.stroke(models["g1045"]);
+  updateCollisionMap("g1045");
+  c.restore();
+  c.save();
+  c.translate(100, 120);
+  c.scale(0.5, 0.5);
+  //c.rotate(angle);
+  c.fillStyle = "white";
+  c.fill(models["g939"]);
+  c.stroke(models["g939"]);
+  updateCollisionMap("g939");
+  c.restore();
+  // collisionChart["g939"].forEach((item) => {
+  //   c.beginPath();
+  //   c.rect(item.x, item.y, 5, 5);
+  //   c.stroke();
+  // });
+  // collisionChart["g1045"].forEach((item) => {
+  //   c.beginPath();
+  //   c.rect(item.x, item.y, 5, 5);
+  //   c.stroke();
+  // });
+  //console.log(testCollision('g939','g1045'));
+};
+
+update = (time) => {
+  if (time - lastFrameTime < updatefrequency) {
+    requestAnimationFrame(update);
+    return;
   }
 
-  draw = () => {
-    let c = this.ctx;
-    this.angle = this.angle + 0.1;
-    c.clearRect(0, 0, c.canvas.clientWidth, c.canvas.clientHeight);
-    c.save();
-    c.translate(100 + this.g_x, 120 + this.g_y);
-    c.scale(0.5, 0.5);
-    c.stroke(this.models["g1045"]);
-    this.updateCollisionMap("g1045")
-    c.restore();
-    c.save();
-    c.translate(100, 120);
-    c.scale(0.5, 0.5);
-    //c.rotate(this.angle);
-    c.fillStyle = "white";
-    c.fill(this.models["g939"]);
-    c.stroke(this.models["g939"]);
-    this.updateCollisionMap("g939")
-    c.restore();
-    this.collisionChart['g939'].forEach(item => {
-      c.beginPath();
-      c.rect(item.x, item.y, 5,5);
-      c.stroke();
-    })
-    this.collisionChart['g1045'].forEach(item => {
-      c.beginPath();
-      c.rect(item.x, item.y, 5,5);
-      c.stroke();
-    })
-    //console.log(this.testCollision('g939','g1045'));
-  };
+  calculateLocations();
+  draw();
+  lastFrameTime = time;
+  requestAnimationFrame(update); // get next farme
+};
 
-  update = (time) => {
-    if (time - this.lastFrameTime < this.updatefrequency) {
-      requestAnimationFrame(this.update);
-      return;
-    }
-    
-    this.calculateLocations();
-    this.draw();
-    this.lastFrameTime = time;
-    requestAnimationFrame(this.update); // get next farme
-  };
-
-  createModelsFromData = (data) => {
-    let modelsTemp = [];
-    for (const [key, value] of Object.entries(data)) {
-      modelsTemp[key] = this.create2DPath(value["data"]);
-    }
-    this.models = modelsTemp;
-  };
-}
+createModelsFromData = (data) => {
+  let modelsTemp = [];
+  for (const [key, value] of Object.entries(data)) {
+    modelsTemp[key] = create2DPath(value["data"]);
+  }
+  models = modelsTemp;
+};
 
 getObjectsData = () => {
   return {
