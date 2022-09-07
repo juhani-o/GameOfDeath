@@ -1,0 +1,16 @@
+{
+  "name": "gaofde",
+  "version": "1.0.0",
+  "description": "Game Of Death - my 2022 attendee for js13k competitiion",
+  "scripts": {
+    "prodserver": "./node_modules/http-server/bin/http-server ./build -p 8000",
+    "devserver": "./node_modules/http-server/bin/http-server ./src -p 8000 -c-1",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Juhani Ovalo",
+  "license": "ISC",
+  "dependencies": {
+    "http-server": "^14.1.1",
+    "minify": "^9.1.0"
+  }
+}
