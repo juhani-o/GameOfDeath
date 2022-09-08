@@ -9,6 +9,10 @@ var g_y = 0;
 var v_x = 0;
 var v_y = 0;
 var collisionChart = {};
+var s_vx = 0;
+var s_vy = 0;
+var debug = false;
+var keysDown = new Set();
 
 create2DPath = (paths) => {
   if (!paths || paths.length === 0) return false;
@@ -24,14 +28,29 @@ mouseEventListener = (e) => {
   var cRect = cnv.getBoundingClientRect();
   m_x = e.clientX - cRect.left;
   m_y = e.clientY - cRect.top;
+  if (e.type === "click") {
+    s_vx = g_x + m_x - 135;
+    s_vy = g_y + m_y - 120;
+  }
 };
 
-keybEventListener = (e) => {
-  console.log(e.type)
-  if (e.type === "keydown") {
+main = () => {
+  cnv = document.getElementById("ca");
+  c = cnv.getContext("2d");
+  cnv.addEventListener("mousemove", mouseEventListener);
+  cnv.addEventListener("click", mouseEventListener);
+  window.addEventListener("keydown", (e) => keysDown.add(e.key));
+  window.addEventListener("keyup", (e) => keysDown.delete(e.key));
+  createModelsFromData(getObjectsData());
+  window.requestAnimationFrame(update);
+};
+
+handleKeysPressed = () => {
+  keysDown.forEach((key) => {
+    console.log(key)
     var x = v_x,
       y = v_y;
-    switch (e.key) {
+    switch (key) {
       case "a":
         x = x - 2;
         break;
@@ -47,18 +66,7 @@ keybEventListener = (e) => {
     }
     v_x = x;
     v_y = y;
-    console.log(vx,vy)
-  }
-};
-
-main = () => {
-  cnv = document.getElementById("ca");
-  c = cnv.getContext("2d");
-  cnv.addEventListener("mousemove", mouseEventListener);
-  window.addEventListener("keydown", keybEventListener);
-  window.addEventListener("keyup", keybEventListener);
-  createModelsFromData(getObjectsData());
-  window.requestAnimationFrame(update);
+  });
 };
 
 calculateLocations = () => {
@@ -104,24 +112,26 @@ draw = () => {
   updateCollisionMap("g1045");
   c.restore();
   c.save();
-  c.translate(100, 120);
+  c.translate(135 + g_x, 120 + g_y);
   c.scale(0.5, 0.5);
-  //c.rotate(angle);
+  if (s_vx !== 0) c.rotate(angle);
   c.fillStyle = "white";
   c.fill(models["g939"]);
   c.stroke(models["g939"]);
   updateCollisionMap("g939");
   c.restore();
-  // collisionChart["g939"].forEach((item) => {
-  //   c.beginPath();
-  //   c.rect(item.x, item.y, 5, 5);
-  //   c.stroke();
-  // });
-  // collisionChart["g1045"].forEach((item) => {
-  //   c.beginPath();
-  //   c.rect(item.x, item.y, 5, 5);
-  //   c.stroke();
-  // });
+  if (debug) {
+    collisionChart["g939"].forEach((item) => {
+      c.beginPath();
+      c.rect(item.x, item.y, 5, 5);
+      c.stroke();
+    });
+    collisionChart["g1045"].forEach((item) => {
+      c.beginPath();
+      c.rect(item.x, item.y, 5, 5);
+      c.stroke();
+    });
+  }
   //console.log(testCollision('g939','g1045'));
 };
 
@@ -130,7 +140,7 @@ update = (time) => {
     requestAnimationFrame(update);
     return;
   }
-
+  handleKeysPressed();
   calculateLocations();
   draw();
   lastFrameTime = time;
