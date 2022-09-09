@@ -13,7 +13,7 @@ import pprint
  """  
 
 def main():
-    doc = minidom.parse('graph/viikatemies_6.svg')
+    doc = minidom.parse('graph/vihulaiset.svg')
 
     nodes = doc.childNodes[0].childNodes
 

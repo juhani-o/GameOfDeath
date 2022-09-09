@@ -5,6 +5,7 @@
   "scripts": {
     "prodserver": "./node_modules/http-server/bin/http-server ./build -p 8000",
     "devserver": "./node_modules/http-server/bin/http-server ./src -p 8000 -c-1",
+    "minify": "./node_modules/minify/bin/minify.js src/main.js > build/main.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Juhani Ovalo",
