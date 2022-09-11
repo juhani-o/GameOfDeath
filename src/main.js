@@ -13,11 +13,11 @@ var scythe_x = 0; // Initial x location of scythe
 var scythe_y = 0; // Initial y location of scythe
 var debug = false;
 var keysDown = new Set();
-var scy_xv = 0,
-  scy_yv = 0;
+var scy_xv = 0, scy_yv = 0;
 var scythe_speed = 5;
 var x_testsize = 100; // hard-coded values for wrapping main antagonist 
 var y_testsize = 200;
+var scy_ltc = 0; // Count how long scythe flies. Use this also to check is scythe flying.
 
 create2DPath = (paths) => {
   if (!paths || paths.length === 0) return false;
@@ -30,10 +30,18 @@ create2DPath = (paths) => {
 };
 
 mouseEventListener = (e) => {
-  console.log(isMouseCaptured())
-  if (!isMouseCaptured()) {
+  if (e.type === 'click' && !isMouseCaptured()) {
     cnv.requestPointerLock();
+    return true;
   }
+  if (e.type === 'click') {
+    scy_ltc = 99;
+  }
+  if (scy_ltc === 0) {
+    scy_xv = e.movementX;
+    scy_yv = e.movementY;
+  }
+
   g_x += e.movementX;
   g_y += e.movementY;
   if (g_x > cnv.width + x_testsize) g_x = -x_testsize;
@@ -70,9 +78,10 @@ calculateLocations = () => {
   y = y + _y;
   g_x = x;
   g_y = y;
-  if (scy_xv !== 0 || scy_yv !== 0) {
+  if (scy_ltc > 0) {
     scythe_x = scythe_x + scy_xv;
     scythe_y = scythe_y + scy_yv;
+    scy_ltc -= 1;
   } else {
     scythe_x = g_x;
     scythe_y = g_y;
@@ -140,7 +149,7 @@ draw = () => {
   c.save();
   c.translate(50 + scythe_x, 20 + scythe_y);
 
-  if (scy_yv !== 0 || scy_xv !== 0) c.rotate(angle);
+  if (scy_ltc > 0) c.rotate(angle);
   c.fillStyle = "white";
   c.fill(models["viikate"]);
   c.stroke(models["viikate"]);
