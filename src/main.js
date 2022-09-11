@@ -9,10 +9,15 @@ var g_y = 0;
 var v_x = 0;
 var v_y = 0;
 var collisionChart = {};
-var s_vx = 0;
-var s_vy = 0;
+var scythe_x = 0; // Initial x location of scythe
+var scythe_y = 0; // Initial y location of scythe
 var debug = false;
 var keysDown = new Set();
+var scy_xv = 0,
+  scy_yv = 0;
+var scythe_speed = 5;
+var x_testsize = 100; // hard-coded values for wrapping main antagonist 
+var y_testsize = 200;
 
 create2DPath = (paths) => {
   if (!paths || paths.length === 0) return false;
@@ -25,53 +30,33 @@ create2DPath = (paths) => {
 };
 
 mouseEventListener = (e) => {
-  var cRect = cnv.getBoundingClientRect();
-  m_x = e.clientX - cRect.left;
-  m_y = e.clientY - cRect.top;
-  if (e.type === "click") {
-    s_vx = g_x + m_x - 135;
-    s_vy = g_y + m_y - 120;
+  console.log(isMouseCaptured())
+  if (!isMouseCaptured()) {
+    cnv.requestPointerLock();
   }
+  g_x += e.movementX;
+  g_y += e.movementY;
+  if (g_x > cnv.width + x_testsize) g_x = -x_testsize;
+  if (g_y > cnv.height + y_testsize) g_y = -y_testsize;
+  if (g_x < -x_testsize) g_x = cnv.width - x_testsize;
+  if (g_y < -y_testsize) g_y = cnv.height + y_testsize;
 };
 
 main = () => {
   cnv = document.getElementById("ca");
   c = cnv.getContext("2d");
+  cnv.requestPointerLock = cnv.requestPointerLock || cnv.mozRequestPointerLock;
   cnv.addEventListener("mousemove", mouseEventListener);
   cnv.addEventListener("click", mouseEventListener);
-  window.addEventListener("keydown", (e) => keysDown.add(e.key));
-  window.addEventListener("keyup", (e) => keysDown.delete(e.key));
+  window.addEventListener("keypress", handleKeybEvents);
   createModelsFromData(getObjectsData());
   window.requestAnimationFrame(update);
 };
 
-handleKeysPressed = () => {
-  keysDown.forEach((key) => {
-    var x = v_x,
-      y = v_y;
-    switch (key) {
-      case " ":
-        scy_xv = 1;
-        break;
-      case "a":
-        x = x - 2;
-        break;
-      case "d":
-        x = x + 2;
-        break;
-      case "w":
-        y = y - 4;
-        break;
-      case "s":
-        y = y + 4;
-        break;
-      case "o":
-        debug = !debug;
-        break;
-    }
-    v_x = x;
-    v_y = y;
-  });
+handleKeybEvents = (e) => {
+  if ((e.key = "d")) {
+    debug = !debug;
+  }
 };
 
 calculateLocations = () => {
@@ -85,6 +70,13 @@ calculateLocations = () => {
   y = y + _y;
   g_x = x;
   g_y = y;
+  if (scy_xv !== 0 || scy_yv !== 0) {
+    scythe_x = scythe_x + scy_xv;
+    scythe_y = scythe_y + scy_yv;
+  } else {
+    scythe_x = g_x;
+    scythe_y = g_y;
+  }
 };
 
 updateCollisionMap = (item) => {
@@ -107,19 +99,48 @@ testCollision = (item1, item2) => {
   });
 };
 
+isMouseCaptured = () => {
+  return (
+    document.pointerLockElement === cnv ||
+    document.mozPointerLockElement === cnv
+  );
+};
+
+drawMenu = () => {
+  let d_w = 800;
+  let d_h = 400;
+  let dlg_x = cnv.width / 2 - (d_w/2);
+  let dlg_y = cnv.height / 2 - (d_h/2);
+  c.fillStyle = 'cornsilk';
+  c.fillRect(dlg_x, dlg_y, d_w, d_h); 
+  c.strokeStyle = 'black';
+  c.strokeRect(dlg_x, dlg_y, d_w, d_h);
+  c.fillStyle = 'black';
+  c.font = '36px serif';
+  c.textAlign = 'center';
+  c.fillText('Game of death', dlg_x + (d_w / 2), dlg_y + 48);
+  c.font = '24px serif';
+  c.fillText('Control Grim with mouse, and throw scythe\'s to intercept incoming \'enemies\'.', dlg_x + (d_w / 2), dlg_y + 90);
+  c.fillText('You can pause game with \'ESC\' (which also releases mouse) and ', dlg_x + (d_w / 2), dlg_y + 120);
+  c.fillText('by pressing \'D\' You can see some debug stuff.', dlg_x + (d_w / 2), dlg_y + 150);
+  c.fillText('Hit \'enemies\' with scythe before they hit You!', dlg_x + (d_w / 2), dlg_y + 180);
+}
+
 draw = () => {
   angle = angle + 0.1;
   c.clearRect(0, 0, c.canvas.clientWidth, c.canvas.clientHeight);
+  // grim reaper
   c.save();
-  c.translate(100 + g_x, 120 + g_y);
-  // c.scale(3.5, 3.5);
+  c.translate(g_x, g_y);
   c.stroke(models["viikatemies"]);
   updateCollisionMap("viikatemies");
   c.restore();
+
+  // scythe
   c.save();
-  c.translate(135 + g_x, 120 + g_y);
-  //c.scale(0.5, 0.5);
-  if (s_vx !== 0) c.rotate(angle);
+  c.translate(50 + scythe_x, 20 + scythe_y);
+
+  if (scy_yv !== 0 || scy_xv !== 0) c.rotate(angle);
   c.fillStyle = "white";
   c.fill(models["viikate"]);
   c.stroke(models["viikate"]);
@@ -127,9 +148,9 @@ draw = () => {
   c.restore();
   c.save();
   //c.fillStyle = "blue";
-  c.translate(135 + g_x, 120 + g_y);
+  c.translate(260, 120);
   //c.fill(models["triskele"]);
-  c.stroke(models["triskele"]);
+  c.stroke(models["sun"]);
   c.restore();
   if (debug) {
     collisionChart["viikate"].forEach((item) => {
@@ -151,11 +172,15 @@ update = (time) => {
     requestAnimationFrame(update);
     return;
   }
-  handleKeysPressed();
-  calculateLocations();
-  draw();
+
+  if (!isMouseCaptured()) {
+    drawMenu();
+  } else {
+    calculateLocations();
+    draw();
+  }
   lastFrameTime = time;
-  requestAnimationFrame(update); // get next farme
+  requestAnimationFrame(update);
 };
 
 createModelsFromData = (data) => {
@@ -171,16 +196,16 @@ getObjectsData = () => {
     viikate: {
       transform: "",
       data: [
-        "m24-92-.82 2.9c1.5.8 3 1.6 4.5 2.5l1.1-3.7zm-5.3 19-52 178 5.2 1.3 51-176z",
-        "m31-86-5.8 19c-21-22-63-28-79-29 30-16 75 4.8 85 10z",
+        "m34-100-.89 2.9c-1.7-.15-3.4-.29-5.1-.35l1.1-3.7zm-5.9 19-53 178-5.1-1.7 53-175z",
+        "m25-99-5.5 19c30-7 68 11 82 19-16-30-66-37-77-38z",
       ],
     },
     viikatemies: {
       transform: "",
       data: [
-        "m-.79-66c0 6.4-3.2 14-8.7 14-5.5 0-10-2.7-10-9.1 0-6.4 4.8-14 10-14 5.5 0 8.7 2.9 8.7 9.3z",
-        "m2.5-66c0 6.4 3.2 14 8.7 14 5.5 0 10-2.7 10-9.1 0-6.4-4.8-14-10-14-5.5 0-8.7 2.9-8.7 9.3z",
-        "m3.2-50c.13 1.5-.37 1.6-1 2-.63.34-1.4-.6-1.4-.6s-.67.94-1.3.6c-.63-.34-1.1-.45-1-2 .13-1.5 2.3-3.9 2.3-3.9s2.2 2.4 2.3 3.9z",
+        "m-.79-66c0 6.4-3.2 14-8.7 14s-10-2.7-10-9.1 4.8-14 10-14c5.5 0 8.7 2.9 8.7 9.3z",
+        "m2.5-66c0 6.4 3.2 14 8.7 14s10-2.7 10-9.1-4.8-14-10-14c-5.5 0-8.7 2.9-8.7 9.3z",
+        "m3.2-50c.13 1.5-.37 1.6-1 2-.63.34-1.4-.6-1.4-.6s-.67.94-1.3.6-1.1-.45-1-2c.13-1.5 2.3-3.9 2.3-3.9s2.2 2.4 2.3 3.9z",
         "m-28-60c-1.1 9.2 13 16 19 11",
         "m31-61c.68 5.1-14 17-21 13",
         "m-14-48c.79 4.5 1.9 4.4 4.3 5.7 3.2 1.8 25 2.8 25-6",
@@ -198,7 +223,7 @@ getObjectsData = () => {
         "m21-8c5 12 10 19 21 30",
         "m50 9.6c1.8.51 4.1.51 4.3-.5.25-1-.28-2.1-2.1-2.6-1.8-.51-4.2-.23-4.5.78-.25 1 .4 1.8 2.2 2.3z",
         "m49 13c1.9.51 4.3.5 4.6-.53.26-1-.3-2.2-2.2-2.7-1.9-.51-4.5-.21-4.7.82-.26 1 .44 1.9 2.4 2.4z",
-        "m48 15c1.8.37 4 .26 4.2-.67.2-.93-.37-1.9-2.2-2.3-1.8-.37-4.1 6e-4-4.3.93-.2.93.48 1.6 2.3 2z",
+        "m48 15c1.8.37 4 .26 4.2-.67s-.37-1.9-2.2-2.3c-1.8-.37-4.1 6e-4-4.3.93-.2.93.48 1.6 2.3 2z",
         "m45 8.3c-.45 2.1-.47 4.7.39 4.9.87.28 1.8-.33 2.3-2.4.45-2.1.23-4.8-.64-5.1-.87-.28-1.6.47-2 2.5z",
       ],
     },
@@ -211,25 +236,14 @@ getObjectsData = () => {
     triskele: {
       transform: "",
       data: [
-        "m129 15c.7-5.6 7.9 3.3 2 4.8-6.8 4.2-13-6.6-7.3-11 6-6.6 18-.48 17 8 .16 8.9-11 15-18 10-5.4-2.2-7.9-8-8.6-13-2.1-8-15-11-19-3.3-4.8 5.8 1.8 16 9 13 7.2-1.9 1-15-3.1-7.4.79 1.9 4.7 1.1 1.7 3.9-7.3 2.4-7.2-9.6-.45-9.7 8.2-1.7 12 10 5.8 15-6.4 6.3-18 .63-18-7.9-1.4-9.9 10-18 19-13 7 3.2 16-2.3 16-10 .39-7.7-11-12-15-5.8-4.7 4.7 3.1 13 7.5 7.7 2.1-4-3-3.7-3.7-2-4.8-5.7 8.6-7.9 7.7-.29.75 8.4-12 11-15 3.2-4.9-7.8 3.8-18 12-15 8.8 1.4 13 12 8.4 20-2.1 4.5-8 6.3-8.2 12-1.4 6.7 4.7 14 12 12 7.3-.84 9.8-13 2.1-15-6-3.1-10 8.8-2.6 7.2l.11-.42-.36-1.3z",
+        "m13 6.7c.7-5.6 7.9 3.3 2 4.8-6.8 4.2-13-6.6-7.3-11 6-6.6 18-.48 17 8 .16 8.9-11 15-18 10-5.4-2.2-7.9-8-8.6-13-2.1-8-15-11-19-3.3-4.8 5.8 1.8 16 9 13 7.2-1.9 1-15-3.1-7.4.79 1.9 4.7 1.1 1.7 3.9-7.3 2.4-7.2-9.6-.45-9.7 8.2-1.7 12 10 5.8 15-6.4 6.3-18 .63-18-7.9-1.4-9.9 10-18 19-13 7 3.2 16-2.3 16-10 .39-7.7-11-12-15-5.8-4.7 4.7 3.1 13 7.5 7.7 2.1-4-3-3.7-3.7-2-4.8-5.7 8.6-7.9 7.7-.29.75 8.4-12 11-15 3.2-4.9-7.8 3.8-18 12-15 8.8 1.4 13 12 8.4 20-2.1 4.5-8 6.3-8.2 12-1.4 6.7 4.7 14 12 12 7.3-.84 9.8-13 2.1-15-6-3.1-10 8.8-2.6 7.2l.11-.42-.36-1.3z",
       ],
     },
     sun: {
       transform: "",
       data: [
-        "m63-14c-4.2.54-8.5 1.5-12 4.1-3.8 1.8-7.8 3.5-10 7-2.8 3.4-4.4 8-3.3 12 .1 2.6-.065 6 2.9 7.1 3.5 1.6 7.5.85 11 .6 4.7-.63 9.2-3.1 12-6.6 3.9-3.8 8-8.2 9-14 .5-3.2-1.7-6.9-5.2-6.7-8.1-.21-17 2.5-22 9.2-2.9 3.4-3.5 9.1-.11 12 4 3.3 10 1.8 14-1 3.3-2.5 6.9-6.3 6-11-.089-4.1-5-3.1-7.6-2.4-3.9.64-8.6 2.9-9.1 7.3.34 3.6 5.2 4.3 8 3 2.5.11 5.3-4.9 1.5-4.5-1.7.86-6.6 1.3-4.6-1.8 2.5-2 7-3.4 9.4-.71 1.4 2.9-1.3 5.4-3.3 7.1-2.9 2.5-7.4 4.5-11 1.9-2.6-1.6-3.5-5.1-2-7.8 2.5-5.2 8.5-7.4 14-8.1 3.2-1 8.7-.6 8.4 3.9-.37 4-2.9 7.3-5.5 10-2.9 3.2-6.5 5.9-11 6.7-4.3 1-10 .076-12-4.4-1.8-4.5.78-9.3 3.7-13 4.3-4.6 10-7.3 16-8.5 1.9.011 6.4-3.1 1.8-3z",
-        "m57-16c-.21-3.3-2.3-7.6-.061-10 3.4.52 2.5 5.2 2.7 7.7.64 1.6-1.3 5.3-2.7 2.6z",
-        "m68-15c-.87-3.3 2-6.1 3-9 2.3-1.9 3.4 1.5 1.8 3.1-1.2 1.9-2 6.3-4.8 5.9z",
-        "m75-4.4c.3-3.3 4.5-3.7 7-3.1 3.2 1.3-1.3 4-3.3 3.2-1.2-.28-2.8.64-3.7-.097z",
-        "m72 6.8c3-1.6 8.6 4.1 5.1 6-2.4-.39-5.5-3.1-5.4-5.5z",
-        "m66 16c3.1-.31 6.8 4.8 4.5 6.8-2.8-.08-4.6-3.4-5.1-5.9.047-.39.3-.74.63-.95z",
-        "m56 20c3.1 1.2 1.4 5.2 1.9 7.6-1.6 3.1-4.3-.06-3.2-2.5.059-1.7-.16-4.1 1.4-5.2z",
-        "m47 20c1.5 2.3.9 6.8-2 7.7-2.2-1.7-1.3-6.3 1-7.6l.46-.11z",
-        "m46-11c1-3.4-2.6-5.8-3.6-8.7-1.9-2.4-5.5.34-2.8 2.5 1.7 2 3.6 6 6.4 6.2z",
-        "m38-4.3c.33-3.3-2.8-5.9-4.9-8-3.4-.4-1.8 3.4-.064 4.5 1.1 1.4 2.9 4.3 5 3.5z",
-        "m35 4.3c-.94-3.4-5.2-1.4-7.7-2.2-2.2-.35-4 2.9-.85 2.9 2.7.14 6.1 1.1 8.4-.46l.068-.15z",
-        "m35 12c-2.7-.57-6.8 1.3-7.6 3.8 2 2.6 5.7-.48 7.5-2.1.38-.5.39-1.2.1-1.7z",
-        "m39 18c1.8 2.3-.72 7.9-3.2 7.2-.9-2.2 1-6.4 3.2-7.2z",
+        "m20-.28a20 20 0 01-20 20 20 20 0 01-20-20 20 20 0 0120-20 20 20 0 0120 20z",
+        "m35-.28c-8.5 3.2-21 5.7-2.8 14-7.1.89-22-3-7.6 11-8.2-3.6-19-11-11 7.6-6.1-6.4-14-18-14 2.8-3.5-6.2-4.8-21-14-2.8-.036-7.2 4.2-20-11-7.6 10-15 3.3-15-7.6-11-1.8-4.2 9.6-8.5 9.6-13 0-4.9-9.4-14-9.4-14s23 13 6.2-9.8c8.9 5.3 18 6 13-9.8 5.9 9.4 12 16 14-2.8 2.2 10 4.7 19 14 2.8-1.9 11-1.5 19 11 7.6-5.4 9.4-8.3 17 7.6 11-6 6.4-19 15 2.8 14z",
       ],
     },
   };
