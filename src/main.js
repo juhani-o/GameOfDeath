@@ -4,19 +4,22 @@ var c = null;
 var models = [];
 var updatefrequency = (1000 / 60) * (60 / 30) - (1000 / 60) * 0.5;
 var lastFrameTime = 0;
+var move_history_x = [];
+var move_history_y = [];
 var g_x = 0;
 var g_y = 0;
 var v_x = 0;
 var v_y = 0;
+var isEnemyExisting = 0;
 var collisionChart = {};
 var scythe_x = 0; // Initial x location of scythe
 var scythe_y = 0; // Initial y location of scythe
 var debug = false;
-var keysDown = new Set();
-var scy_xv = 0, scy_yv = 0;
+var scy_xv = 0,
+  scy_yv = 0;
 var scythe_speed = 5;
-var x_testsize = 100; // hard-coded values for wrapping main antagonist 
-var y_testsize = 200;
+var x_testsize = 50; // Value for define bounding box of main antagonist. Just for wrapping around screen, no collision detection.
+var y_testsize = 70; // Height, same as row above.
 var scy_ltc = 0; // Count how long scythe flies. Use this also to check is scythe flying.
 
 create2DPath = (paths) => {
@@ -30,23 +33,41 @@ create2DPath = (paths) => {
 };
 
 mouseEventListener = (e) => {
-  if (e.type === 'click' && !isMouseCaptured()) {
+  if (e.type === "click" && !isMouseCaptured()) {
     cnv.requestPointerLock();
     return true;
   }
-  if (e.type === 'click') {
-    scy_ltc = 99;
+  if (e.type === "click" && scy_ltc === 0) {
+    scy_ltc = 40;
   }
   if (scy_ltc === 0) {
-    scy_xv = e.movementX;
-    scy_yv = e.movementY;
-  }
+    let x = e.movementX;
+    let y = e.movementY;
 
+    // Store history of movement
+    if (move_history_x.push(x) > 10) move_history_x.shift();
+    if (move_history_y.push(y) > 10) move_history_y.shift();
+
+    // Calculate average of movement points. Trying to increase accuracy.
+    let x_history = move_history_x.reduce((a, b) => a + b, 0) / 10;
+    let y_history = move_history_y.reduce((a, b) => a + b, 0) / 10;
+
+    // Let's calculate steady speed for thrown scythe
+    let direction = Math.atan2(y_history, x_history);
+    var y_motion = 15 * Math.sin(direction);
+    var x_motion = 15 * Math.cos(direction);
+
+    // set 
+    scy_xv = x_motion;
+    scy_yv = y_motion;
+  }
+  // Move 
   g_x += e.movementX;
   g_y += e.movementY;
-  if (g_x > cnv.width + x_testsize) g_x = -x_testsize;
-  if (g_y > cnv.height + y_testsize) g_y = -y_testsize;
-  if (g_x < -x_testsize) g_x = cnv.width - x_testsize;
+
+  if (g_x > cnv.width - x_testsize) g_x = cnv.width - x_testsize;
+  if (g_y > cnv.height - y_testsize) g_y = cnv.height - y_testsize;
+  if (g_x < x_testsize) g_x = x_testsize;
   if (g_y < -y_testsize) g_y = cnv.height + y_testsize;
 };
 
@@ -62,22 +83,20 @@ main = () => {
 };
 
 handleKeybEvents = (e) => {
-  if ((e.key = "d")) {
+  if (e.key = "d") {
     debug = !debug;
   }
 };
 
 calculateLocations = () => {
-  v_x = v_x / 1.1;
-  v_y = v_y / 1.1;
-  var x = g_x,
-    y = g_y;
-  var _x = v_x,
-    _y = v_y;
-  x = x + _x;
-  y = y + _y;
-  g_x = x;
-  g_y = y;
+  if (isEnemyExisting !== 0 && Math.random() > 0.99) {
+    console.log("enemy is born");
+    isEnemyExisting += 1;
+    enemyLocationX = Math.round(Math.random());
+    console.log("Enemy starts from %f", enemyLocationX);
+  }
+
+  //  If scythe lifetime counter is above zero, scythe is flying to given direction.
   if (scy_ltc > 0) {
     scythe_x = scythe_x + scy_xv;
     scythe_y = scythe_y + scy_yv;
@@ -88,6 +107,7 @@ calculateLocations = () => {
   }
 };
 
+//  update collision coordinates of given item (scythe, grim, enemies etc.)
 updateCollisionMap = (item) => {
   var tempChart = [];
   for (var i = 0; i < cnv.clientWidth; i = i + 10) {
@@ -100,6 +120,7 @@ updateCollisionMap = (item) => {
   collisionChart[item] = tempChart;
 };
 
+// Not so pixel-perfect check of object location, but should do the job.
 testCollision = (item1, item2) => {
   return collisionChart[item1].some((object1) => {
     return collisionChart[item2].some((object2) => {
@@ -108,6 +129,7 @@ testCollision = (item1, item2) => {
   });
 };
 
+// Check if mouse is captured in canvas
 isMouseCaptured = () => {
   return (
     document.pointerLockElement === cnv ||
@@ -115,25 +137,42 @@ isMouseCaptured = () => {
   );
 };
 
+// Draw menu
 drawMenu = () => {
   let d_w = 800;
   let d_h = 400;
-  let dlg_x = cnv.width / 2 - (d_w/2);
-  let dlg_y = cnv.height / 2 - (d_h/2);
-  c.fillStyle = 'cornsilk';
-  c.fillRect(dlg_x, dlg_y, d_w, d_h); 
-  c.strokeStyle = 'black';
+  let dlg_x = cnv.width / 2 - d_w / 2;
+  let dlg_y = cnv.height / 2 - d_h / 2;
+  c.fillStyle = "cornsilk";
+  c.fillRect(dlg_x, dlg_y, d_w, d_h);
+  c.strokeStyle = "black";
   c.strokeRect(dlg_x, dlg_y, d_w, d_h);
-  c.fillStyle = 'black';
-  c.font = '36px serif';
-  c.textAlign = 'center';
-  c.fillText('Game of death', dlg_x + (d_w / 2), dlg_y + 48);
-  c.font = '24px serif';
-  c.fillText('Control Grim with mouse, and throw scythe\'s to intercept incoming \'enemies\'.', dlg_x + (d_w / 2), dlg_y + 90);
-  c.fillText('You can pause game with \'ESC\' (which also releases mouse) and ', dlg_x + (d_w / 2), dlg_y + 120);
-  c.fillText('by pressing \'D\' You can see some debug stuff.', dlg_x + (d_w / 2), dlg_y + 150);
-  c.fillText('Hit \'enemies\' with scythe before they hit You!', dlg_x + (d_w / 2), dlg_y + 180);
-}
+  c.fillStyle = "black";
+  c.font = "36px serif";
+  c.textAlign = "center";
+  c.fillText("Game of death", dlg_x + d_w / 2, dlg_y + 48);
+  c.font = "24px serif";
+  c.fillText(
+    "Control Grim with mouse, and throw scythe's to intercept incoming 'enemies'.",
+    dlg_x + d_w / 2,
+    dlg_y + 90
+  );
+  c.fillText(
+    "You can pause game with 'ESC' (which also releases mouse) and ",
+    dlg_x + d_w / 2,
+    dlg_y + 120
+  );
+  c.fillText(
+    "by pressing 'D' You can see some debug stuff.",
+    dlg_x + d_w / 2,
+    dlg_y + 150
+  );
+  c.fillText(
+    "Hit 'enemies' with scythe before they hit You!",
+    dlg_x + d_w / 2,
+    dlg_y + 180
+  );
+};
 
 draw = () => {
   angle = angle + 0.1;
@@ -149,18 +188,40 @@ draw = () => {
   c.save();
   c.translate(50 + scythe_x, 20 + scythe_y);
 
+  // If scythe is thrown, rotate it
   if (scy_ltc > 0) c.rotate(angle);
   c.fillStyle = "white";
   c.fill(models["viikate"]);
   c.stroke(models["viikate"]);
   updateCollisionMap("viikate");
   c.restore();
+
+  // Sun ('enemy')
   c.save();
-  //c.fillStyle = "blue";
   c.translate(260, 120);
-  //c.fill(models["triskele"]);
+  c.scale(5, 5);
+  c.fillStyle = "yellow";
+  c.fill(models["sun"]);
+  c.strokeStyle = "black";
   c.stroke(models["sun"]);
   c.restore();
+
+  // Triskele ('enemy')
+  c.save();
+  c.translate(500, 120);
+  c.scale(3, 3);
+  c.fillStyle = "black";
+  c.fill(models["triskele"]);
+  c.restore();
+
+  // Triskele ('ankh')
+  c.save();
+  c.translate(600, 300);
+  c.scale(3, 3);
+  c.fillStyle = "black";
+  c.fill(models["ankh"]);
+  c.restore();
+
   if (debug) {
     collisionChart["viikate"].forEach((item) => {
       c.beginPath();
