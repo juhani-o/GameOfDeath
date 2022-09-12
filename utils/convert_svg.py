@@ -1,19 +1,8 @@
 import xml.dom.minidom as minidom
 import pprint
 
-""" 
-  Read svg and export data as js function
-
-  If needed transform can be calculated
-  x = a*x + c*y + e 
-  y = b*x + d*y + f
-
-  (calculation is not done now, )
-
- """  
-
 def main():
-    doc = minidom.parse('graph/viikatemies_7.svg')
+    doc = minidom.parse('graph/vuoristo.svg')
 
     nodes = doc.childNodes[0].childNodes
 

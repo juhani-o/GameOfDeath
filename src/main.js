@@ -15,12 +15,30 @@ var collisionChart = {};
 var scythe_x = 0; // Initial x location of scythe
 var scythe_y = 0; // Initial y location of scythe
 var debug = false;
-var scy_xv = 0,
-  scy_yv = 0;
+var scy_xv = 0;
+var scy_yv = 0;
 var scythe_speed = 5;
 var x_testsize = 50; // Value for define bounding box of main antagonist. Just for wrapping around screen, no collision detection.
 var y_testsize = 70; // Height, same as row above.
 var scy_ltc = 0; // Count how long scythe flies. Use this also to check is scythe flying.
+var enemyLocationX = 0;
+var enemyLocationY = -30;
+var enemy = null; // Active enemy.
+var scythe_hit = false;
+var gamespeed = 1;
+var enemylist = ["sun", "triskele", "ankh"];
+
+var lifes = 3; // Count of lifes
+var score = 0; // well, score
+var difficulty = 0; // this will increase very slowly and affect to enemy speed
+var playtime = 0;
+
+resetValues = () => {
+  playtime = 0;
+  score = 0;
+  difficulty = 0;
+  lifes = 3;
+}
 
 create2DPath = (paths) => {
   if (!paths || paths.length === 0) return false;
@@ -34,6 +52,7 @@ create2DPath = (paths) => {
 
 mouseEventListener = (e) => {
   if (e.type === "click" && !isMouseCaptured()) {
+    if(lifes === 0) resetValues();
     cnv.requestPointerLock();
     return true;
   }
@@ -57,11 +76,11 @@ mouseEventListener = (e) => {
     var y_motion = 15 * Math.sin(direction);
     var x_motion = 15 * Math.cos(direction);
 
-    // set 
+    // set
     scy_xv = x_motion;
     scy_yv = y_motion;
   }
-  // Move 
+  // Move
   g_x += e.movementX;
   g_y += e.movementY;
 
@@ -83,17 +102,32 @@ main = () => {
 };
 
 handleKeybEvents = (e) => {
-  if (e.key = "d") {
+  if ((e.key = "d")) {
     debug = !debug;
   }
 };
 
 calculateLocations = () => {
-  if (isEnemyExisting !== 0 && Math.random() > 0.99) {
-    console.log("enemy is born");
-    isEnemyExisting += 1;
-    enemyLocationX = Math.round(Math.random());
-    console.log("Enemy starts from %f", enemyLocationX);
+  // randomly create enemy.
+  if (enemy === null && Math.random() > 0.99) {
+    enemy = enemylist[Math.round(Math.random() * 2)];
+    enemyLocationX = Math.round(Math.random() * cnv.width);
+  }
+
+  if (enemy !== null) {
+    enemyLocationY += (10 + difficulty);
+
+    if (scythe_hit) {
+      enemy = null;
+      enemyLocationY = -20;
+      scythe_hit = false;
+      score += 20;
+    }
+    if (enemyLocationY > cnv.height) {
+      enemy = null;
+      enemyLocationY = -20;
+      lifes -=1;
+    }
   }
 
   //  If scythe lifetime counter is above zero, scythe is flying to given direction.
@@ -138,7 +172,8 @@ isMouseCaptured = () => {
 };
 
 // Draw menu
-drawMenu = () => {
+drawMenu = (item) => {
+  // Draw dialog base for menu
   let d_w = 800;
   let d_h = 400;
   let dlg_x = cnv.width / 2 - d_w / 2;
@@ -147,6 +182,26 @@ drawMenu = () => {
   c.fillRect(dlg_x, dlg_y, d_w, d_h);
   c.strokeStyle = "black";
   c.strokeRect(dlg_x, dlg_y, d_w, d_h);
+
+  if (item == 'gameover') {
+    c.fillStyle = "black";
+    c.font = "36px serif";
+    c.textAlign = "center";
+    c.fillText("Game OVER!", dlg_x + d_w / 2, dlg_y + 48);
+    c.font = "24px serif";
+    c.fillText(
+      "Your final result; Score:" + score + " playtime:" + playtime + " difficulty factor:" + difficulty,
+      dlg_x + d_w / 2,
+      dlg_y + 90
+    );
+    c.fillText(
+      "Please try again!",
+      dlg_x + d_w / 2,
+      dlg_y + 120
+    );
+    return true;
+  }
+
   c.fillStyle = "black";
   c.font = "36px serif";
   c.textAlign = "center";
@@ -177,9 +232,26 @@ drawMenu = () => {
 draw = () => {
   angle = angle + 0.1;
   c.clearRect(0, 0, c.canvas.clientWidth, c.canvas.clientHeight);
+
+  // show life's
+  c.save();
+  c.fillStyle = "black";
+  c.font = "36px serif";
+  c.textAlign = "left";
+  c.fillText("Deaths:" + lifes + " Score:" + score, 20,30);
+  c.restore();
+  // draw some minimalistic landscape to background
+  c.save();
+  c.translate(0, 0);
+  c.scale(1.5,1.5)
+  c.stroke(models["vuoristo"]);
+  c.restore();
+
   // grim reaper
   c.save();
   c.translate(g_x, g_y);
+  c.fillStyle = "white";
+  c.fill(models['viikatemies'])
   c.stroke(models["viikatemies"]);
   updateCollisionMap("viikatemies");
   c.restore();
@@ -196,31 +268,27 @@ draw = () => {
   updateCollisionMap("viikate");
   c.restore();
 
-  // Sun ('enemy')
-  c.save();
-  c.translate(260, 120);
-  c.scale(5, 5);
-  c.fillStyle = "yellow";
-  c.fill(models["sun"]);
-  c.strokeStyle = "black";
-  c.stroke(models["sun"]);
-  c.restore();
-
-  // Triskele ('enemy')
-  c.save();
-  c.translate(500, 120);
-  c.scale(3, 3);
-  c.fillStyle = "black";
-  c.fill(models["triskele"]);
-  c.restore();
-
-  // Triskele ('ankh')
-  c.save();
-  c.translate(600, 300);
-  c.scale(3, 3);
-  c.fillStyle = "black";
-  c.fill(models["ankh"]);
-  c.restore();
+  if (enemy !== null) {
+    c.save();
+    c.translate(enemyLocationX, enemyLocationY);
+    c.scale(3, 3);
+    // Some hard-coded coloring for sun. Did not have time to
+    // create working export from Inkscape
+    if (enemy === "sun") {
+      c.fillStyle = "yellow";
+      c.fill(models["sun"]);
+      c.strokeStyle = "black";
+      c.stroke(models["sun"]);
+    } else {
+      c.fillStyle = "black";
+      c.fill(models[enemy]);
+    }
+    updateCollisionMap(enemy);
+    c.restore();
+    if (testCollision("viikate", enemy) && scy_ltc > 0) {
+      scythe_hit = true;
+    }
+  }
 
   if (debug) {
     collisionChart["viikate"].forEach((item) => {
@@ -233,8 +301,14 @@ draw = () => {
       c.rect(item.x, item.y, 5, 5);
       c.stroke();
     });
+    if (enemy !== null) {
+      collisionChart[enemy].forEach((item) => {
+        c.beginPath();
+        c.rect(item.x, item.y, 5, 5);
+        c.stroke();
+      });
+    }
   }
-  //console.log(testCollision('g939','g1045'));
 };
 
 update = (time) => {
@@ -242,10 +316,14 @@ update = (time) => {
     requestAnimationFrame(update);
     return;
   }
-
-  if (!isMouseCaptured()) {
+  
+  if (lifes === 0) {
+    document.exitPointerLock();
+    drawMenu('gameover');
+  } else if (!isMouseCaptured()) {
     drawMenu();
   } else {
+    difficulty+=.1;
     calculateLocations();
     draw();
   }
@@ -314,6 +392,16 @@ getObjectsData = () => {
       data: [
         "m20-.28a20 20 0 01-20 20 20 20 0 01-20-20 20 20 0 0120-20 20 20 0 0120 20z",
         "m35-.28c-8.5 3.2-21 5.7-2.8 14-7.1.89-22-3-7.6 11-8.2-3.6-19-11-11 7.6-6.1-6.4-14-18-14 2.8-3.5-6.2-4.8-21-14-2.8-.036-7.2 4.2-20-11-7.6 10-15 3.3-15-7.6-11-1.8-4.2 9.6-8.5 9.6-13 0-4.9-9.4-14-9.4-14s23 13 6.2-9.8c8.9 5.3 18 6 13-9.8 5.9 9.4 12 16 14-2.8 2.2 10 4.7 19 14 2.8-1.9 11-1.5 19 11 7.6-5.4 9.4-8.3 17 7.6 11-6 6.4-19 15 2.8 14z",
+      ],
+    },
+    vuoristo: {
+      transform: "",
+      data: [
+        "m1.6 340 109-33 105 33 15-43 22 42 54-42 21 44 97-20 24 17 53-31 35 28 44-26 54 28 44-55 14 32 46-26",
+        "m136 57a47 47 0 00-47 47 47 47 0 0047 47 47 47 0 0016-2.7 47 47 0 01-33-45 47 47 0 0132-45 47 47 0 00-14-2.2z",
+        "m1.2 256 62-74s5.1 43 44 68c39 25 89 21 89 21s59-27 92-58c33-31 32-36 32-36s6 39 17 57c11 18 72 39 72 39l140 3.6s54-13 89-47c34-34 71-82 71-82s20 57 31 74",
+        "m266 232c23 7.4 47 8.7 71 4.1",
+        "m25 228c19 3.3 39 2 58 .077",
       ],
     },
   };
