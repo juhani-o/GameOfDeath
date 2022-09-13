@@ -1,30 +1,31 @@
-var angle = 0;
-var cnv = null;
-var c = null;
-var models = [];
-var updatefrequency = (1000 / 60) * (60 / 30) - (1000 / 60) * 0.5;
-var lastFrameTime = 0;
-var move_history_x = [];
-var move_history_y = [];
-var g_x = 0;
-var g_y = 0;
-var v_x = 0;
-var v_y = 0;
-var isEnemyExisting = 0;
-var collisionChart = {};
+/* Game Of Death Version 0.9999
+      By Juhani Ovalo */
+
+var angle = 0;  // Rotating angle of scythe
+var cnv = null; // Canvas
+var c = null; // context
+var models = []; // Path2D models are stored here
+var updatefrequency = (1000 / 60) * (60 / 30) - (1000 / 60) * 0.5; // Frequency how often page is updated. Currently 30fps.
+var lastFrameTime = 0;  // Check with this when page was updated last time. Don't touch this :)
+var move_history_x = [];  // Store mouse movement history X here
+var move_history_y = [];  // Store mouse movement history Y here
+var g_x = 0;  // Grim's x location
+var g_y = 0;  // Grim's y location
+
+var collisionChart = {}; // Game items collision maps stored here
 var scythe_x = 0; // Initial x location of scythe
 var scythe_y = 0; // Initial y location of scythe
-var debug = false;
-var scy_xv = 0;
-var scy_yv = 0;
-var scythe_speed = 5;
-var x_testsize = 50; // Value for define bounding box of main antagonist. Just for wrapping around screen, no collision detection.
+var debug = false;  // is debugging on. Key D is used to switch this
+var scy_xv = 0; // Scythes x speed
+var scy_yv = 0; // Scythes y speed
+var scythe_speed = 25; // How fast scythe is flying
+var x_testsize = 50; // Value for define bounding box Grim. 
 var y_testsize = 70; // Height, same as row above.
 var scy_ltc = 0; // Count how long scythe flies. Use this also to check is scythe flying.
-var enemyLocationX = 0;
-var enemyLocationY = -30;
+var enemyLocationX = 0; // Initial enemy location X
+var enemyLocationY = -30; // Initial enemy location Y
 var enemy = null; // Active enemy.
-var scythe_hit = false;
+var scythe_hit = false; // Has scythe hit enemy?
 
 var enemylist = ["sun", "triskele", "ankh"];
 
@@ -32,6 +33,7 @@ var lifes = 3; // Count of lifes
 var score = 0; // well, score
 var difficulty = 0; // this will increase very slowly and affect to enemy speed
 
+// After game over, reset values
 resetValues = () => {
   playtime = 0;
   score = 0;
@@ -39,6 +41,7 @@ resetValues = () => {
   lifes = 3;
 };
 
+// Create path from SVG data
 create2DPath = (paths) => {
   if (!paths || paths.length === 0) return false;
 
@@ -49,6 +52,7 @@ create2DPath = (paths) => {
   return tmp;
 };
 
+// Mouse listerner event.
 mouseEventListener = (e) => {
   if (e.type === "click" && !isMouseCaptured()) {
     if (lifes === 0) resetValues();
@@ -72,23 +76,25 @@ mouseEventListener = (e) => {
 
     // Let's calculate steady speed for thrown scythe
     let direction = Math.atan2(y_history, x_history);
-    var y_motion = 25 * Math.sin(direction);
-    var x_motion = 25 * Math.cos(direction);
+    var y_motion = scythe_speed * Math.sin(direction);
+    var x_motion = scythe_speed * Math.cos(direction);
 
-    // set
+    // set motion of scythe
     scy_xv = x_motion;
     scy_yv = y_motion;
   }
-  // Move
+  // Move Grim
   g_x += e.movementX;
   g_y += e.movementY;
 
+  // Keep main hero inside screen
   if (g_x > cnv.width - x_testsize) g_x = cnv.width - x_testsize;
   if (g_y > cnv.height - y_testsize) g_y = cnv.height - y_testsize;
   if (g_x < x_testsize) g_x = x_testsize;
   if (g_y < -y_testsize) g_y = cnv.height + y_testsize;
 };
 
+// Start point of program
 main = () => {
   cnv = document.getElementById("ca");
   c = cnv.getContext("2d");
@@ -113,16 +119,20 @@ calculateLocations = () => {
     enemyLocationX = Math.round(Math.random() * cnv.width);
   }
 
+  // If there is enemy
   if (enemy !== null) {
     enemyLocationY += 10 + difficulty;
     difficulty += 0.01; //  This speeds up enemies
 
+    // Schythe hit's enemy, add points and delete current enemy
     if (scythe_hit) {
       enemy = null;
       enemyLocationY = -20;
       scythe_hit = false;
       score += 20;
     }
+
+    // Enemy has passed through field, one life removed.
     if (enemyLocationY > cnv.height) {
       enemy = null;
       enemyLocationY = -20;
@@ -131,6 +141,7 @@ calculateLocations = () => {
   }
 
   //  If scythe lifetime counter is above zero, scythe is flying to given direction.
+  //  If lifetime has passed, reset scythe's location to Grims hand
   if (scy_ltc > 0) {
     scythe_x = scythe_x + scy_xv;
     scythe_y = scythe_y + scy_yv;
@@ -183,6 +194,7 @@ drawMenu = (item) => {
   c.strokeStyle = "black";
   c.strokeRect(dlg_x, dlg_y, d_w, d_h);
 
+  // Game over menu
   if (item == "gameover") {
     c.fillStyle = "black";
     c.font = "36px serif";
@@ -201,6 +213,7 @@ drawMenu = (item) => {
     return true;
   }
 
+  //  Main menu
   c.fillStyle = "black";
   c.font = "36px serif";
   c.textAlign = "center";
@@ -228,6 +241,7 @@ drawMenu = (item) => {
   );
 };
 
+// Main draw routine
 draw = () => {
   angle = angle + 0.1;
   c.clearRect(0, 0, c.canvas.clientWidth, c.canvas.clientHeight);
@@ -238,20 +252,22 @@ draw = () => {
   // c.fillStyle = g;
   // c.fillRect(0, 0, cnv.width, cnv.height);
 
-  // show life's
+  // show life's(deaths) and score
   c.save();
   c.fillStyle = "black";
   c.font = "36px serif";
   c.textAlign = "left";
   c.fillText("Deaths:" + lifes + " Score:" + score, 20, 30);
   c.restore();
-  // draw some minimalistic landscape to background
+
+  // draw some minimalistic landscape as background
   c.save();
   c.translate(0, 0);
   c.scale(1.5, 1.5);
   c.stroke(models["vuoristo"]);
   c.restore();
 
+  // moon
   c.save();
   c.fillStyle="yellow";
   c.translate(0, 0);
@@ -275,12 +291,14 @@ draw = () => {
 
   // If scythe is thrown, rotate it
   if (scy_ltc > 0) c.rotate(angle);
+
   c.fillStyle = "white";
   c.fill(models["viikate"]);
   c.stroke(models["viikate"]);
   updateCollisionMap("viikate");
   c.restore();
 
+  // If there is enemy, draw it
   if (enemy !== null) {
     c.save();
     c.translate(enemyLocationX, enemyLocationY);
@@ -303,6 +321,7 @@ draw = () => {
     }
   }
 
+  // Debug to show collision points.
   if (debug) {
     collisionChart["viikate"].forEach((item) => {
       c.beginPath();
@@ -324,6 +343,7 @@ draw = () => {
   }
 };
 
+//  Update 
 update = (time) => {
   if (time - lastFrameTime < updatefrequency) {
     requestAnimationFrame(update);
@@ -343,6 +363,7 @@ update = (time) => {
   requestAnimationFrame(update);
 };
 
+// Create Path2D objects. Data below is stripped from SVG
 createModelsFromData = (data) => {
   let modelsTemp = [];
   for (const [key, value] of Object.entries(data)) {
@@ -351,6 +372,7 @@ createModelsFromData = (data) => {
   models = modelsTemp;
 };
 
+// Main objects for game. Data is extracted from Inkscape optimized SVG
 getObjectsData = () => {
   return {
     viikate: {
