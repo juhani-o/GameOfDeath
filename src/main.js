@@ -192,8 +192,8 @@ drawMenu = (item) => {
     c.fillText(
       "Your final result; Score:" +
         score +
-        " difficulty factor:" +
-        difficulty,
+        " difficulty/speed factor:" +
+        Math.round(difficulty),
       dlg_x + d_w / 2,
       dlg_y + 90
     );
