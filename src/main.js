@@ -25,20 +25,19 @@ var enemyLocationX = 0;
 var enemyLocationY = -30;
 var enemy = null; // Active enemy.
 var scythe_hit = false;
-var gamespeed = 1;
+
 var enemylist = ["sun", "triskele", "ankh"];
 
 var lifes = 3; // Count of lifes
 var score = 0; // well, score
 var difficulty = 0; // this will increase very slowly and affect to enemy speed
-var playtime = 0;
 
 resetValues = () => {
   playtime = 0;
   score = 0;
   difficulty = 0;
   lifes = 3;
-}
+};
 
 create2DPath = (paths) => {
   if (!paths || paths.length === 0) return false;
@@ -52,7 +51,7 @@ create2DPath = (paths) => {
 
 mouseEventListener = (e) => {
   if (e.type === "click" && !isMouseCaptured()) {
-    if(lifes === 0) resetValues();
+    if (lifes === 0) resetValues();
     cnv.requestPointerLock();
     return true;
   }
@@ -73,8 +72,8 @@ mouseEventListener = (e) => {
 
     // Let's calculate steady speed for thrown scythe
     let direction = Math.atan2(y_history, x_history);
-    var y_motion = 15 * Math.sin(direction);
-    var x_motion = 15 * Math.cos(direction);
+    var y_motion = 25 * Math.sin(direction);
+    var x_motion = 25 * Math.cos(direction);
 
     // set
     scy_xv = x_motion;
@@ -115,7 +114,8 @@ calculateLocations = () => {
   }
 
   if (enemy !== null) {
-    enemyLocationY += (10 + difficulty);
+    enemyLocationY += 10 + difficulty;
+    difficulty += 0.01; //  This speeds up enemies
 
     if (scythe_hit) {
       enemy = null;
@@ -126,7 +126,7 @@ calculateLocations = () => {
     if (enemyLocationY > cnv.height) {
       enemy = null;
       enemyLocationY = -20;
-      lifes -=1;
+      lifes -= 1;
     }
   }
 
@@ -183,22 +183,21 @@ drawMenu = (item) => {
   c.strokeStyle = "black";
   c.strokeRect(dlg_x, dlg_y, d_w, d_h);
 
-  if (item == 'gameover') {
+  if (item == "gameover") {
     c.fillStyle = "black";
     c.font = "36px serif";
     c.textAlign = "center";
     c.fillText("Game OVER!", dlg_x + d_w / 2, dlg_y + 48);
     c.font = "24px serif";
     c.fillText(
-      "Your final result; Score:" + score + " playtime:" + playtime + " difficulty factor:" + difficulty,
+      "Your final result; Score:" +
+        score +
+        " difficulty factor:" +
+        difficulty,
       dlg_x + d_w / 2,
       dlg_y + 90
     );
-    c.fillText(
-      "Please try again!",
-      dlg_x + d_w / 2,
-      dlg_y + 120
-    );
+    c.fillText("Please try again!", dlg_x + d_w / 2, dlg_y + 120);
     return true;
   }
 
@@ -232,26 +231,40 @@ drawMenu = (item) => {
 draw = () => {
   angle = angle + 0.1;
   c.clearRect(0, 0, c.canvas.clientWidth, c.canvas.clientHeight);
+  //  Did not finish good looking background color so let's keep clearRect
+  // var g = c.createLinearGradient(0, 0, 0, cnv.height);
+  // g.addColorStop(0, "#0000ff");
+  // g.addColorStop(0.3, "#ffffff");
+  // c.fillStyle = g;
+  // c.fillRect(0, 0, cnv.width, cnv.height);
 
   // show life's
   c.save();
   c.fillStyle = "black";
   c.font = "36px serif";
   c.textAlign = "left";
-  c.fillText("Deaths:" + lifes + " Score:" + score, 20,30);
+  c.fillText("Deaths:" + lifes + " Score:" + score, 20, 30);
   c.restore();
   // draw some minimalistic landscape to background
   c.save();
   c.translate(0, 0);
-  c.scale(1.5,1.5)
+  c.scale(1.5, 1.5);
   c.stroke(models["vuoristo"]);
+  c.restore();
+
+  c.save();
+  c.fillStyle="yellow";
+  c.translate(0, 0);
+  c.scale(1.5, 1.5);
+  c.fill(models["kuu"]);
+  c.stroke(models["kuu"]);
   c.restore();
 
   // grim reaper
   c.save();
   c.translate(g_x, g_y);
   c.fillStyle = "white";
-  c.fill(models['viikatemies'])
+  c.fill(models["viikatemies"]);
   c.stroke(models["viikatemies"]);
   updateCollisionMap("viikatemies");
   c.restore();
@@ -316,14 +329,13 @@ update = (time) => {
     requestAnimationFrame(update);
     return;
   }
-  
+
   if (lifes === 0) {
     document.exitPointerLock();
-    drawMenu('gameover');
+    drawMenu("gameover");
   } else if (!isMouseCaptured()) {
     drawMenu();
   } else {
-    difficulty+=.1;
     calculateLocations();
     draw();
   }
@@ -394,11 +406,16 @@ getObjectsData = () => {
         "m35-.28c-8.5 3.2-21 5.7-2.8 14-7.1.89-22-3-7.6 11-8.2-3.6-19-11-11 7.6-6.1-6.4-14-18-14 2.8-3.5-6.2-4.8-21-14-2.8-.036-7.2 4.2-20-11-7.6 10-15 3.3-15-7.6-11-1.8-4.2 9.6-8.5 9.6-13 0-4.9-9.4-14-9.4-14s23 13 6.2-9.8c8.9 5.3 18 6 13-9.8 5.9 9.4 12 16 14-2.8 2.2 10 4.7 19 14 2.8-1.9 11-1.5 19 11 7.6-5.4 9.4-8.3 17 7.6 11-6 6.4-19 15 2.8 14z",
       ],
     },
+    kuu: {
+      transform: "",
+      data: [
+        "m136 57a47 47 0 00-47 47 47 47 0 0047 47 47 47 0 0016-2.7 47 47 0 01-33-45 47 47 0 0132-45 47 47 0 00-14-2.2z",
+      ],
+    },
     vuoristo: {
       transform: "",
       data: [
         "m1.6 340 109-33 105 33 15-43 22 42 54-42 21 44 97-20 24 17 53-31 35 28 44-26 54 28 44-55 14 32 46-26",
-        "m136 57a47 47 0 00-47 47 47 47 0 0047 47 47 47 0 0016-2.7 47 47 0 01-33-45 47 47 0 0132-45 47 47 0 00-14-2.2z",
         "m1.2 256 62-74s5.1 43 44 68c39 25 89 21 89 21s59-27 92-58c33-31 32-36 32-36s6 39 17 57c11 18 72 39 72 39l140 3.6s54-13 89-47c34-34 71-82 71-82s20 57 31 74",
         "m266 232c23 7.4 47 8.7 71 4.1",
         "m25 228c19 3.3 39 2 58 .077",
