@@ -94,7 +94,7 @@ mouseEventListener = (e) => {
   if (g_y < -y_testsize) g_y = cnv.height + y_testsize;
 };
 
-// Start point of program
+// Start point
 main = () => {
   cnv = document.getElementById("ca");
   c = cnv.getContext("2d");
@@ -106,12 +106,14 @@ main = () => {
   window.requestAnimationFrame(update);
 };
 
+// Keyboard events
 handleKeybEvents = (e) => {
   if ((e.key = "d")) {
     debug = !debug;
   }
 };
 
+// Calculate item's locations and check hits
 calculateLocations = () => {
   // randomly create enemy.
   if (enemy === null && Math.random() > 0.99) {
@@ -218,7 +220,7 @@ drawMenu = (item) => {
   c.font = "36px serif";
   c.textAlign = "center";
   c.fillText("Game of death", dlg_x + d_w / 2, dlg_y + 48);
-  c.font = "24px serif";
+  c.font = "20px serif";
   c.fillText(
     "Control Grim with mouse, and throw scythe's to intercept incoming 'enemies'.",
     dlg_x + d_w / 2,
